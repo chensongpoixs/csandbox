@@ -16,8 +16,8 @@
 
 
 
-VOID ProorityBoosterUnload(_In_  PDRIVER_OBJECT pDriverObject);
- 
+VOID PriorityBoosterUnload(_In_  PDRIVER_OBJECT pDriverObject);
+NTSTATUS PrioitityBoosterDriverInit( _In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING RegistryPath);
 NTSTATUS PriorityBoosterCreateClose( _In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp);
 
 NTSTATUS PriorityBoosterDeviceControl(_In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp);
@@ -28,8 +28,13 @@ NTSTATUS DriverEntry(
 	IN PUNICODE_STRING    RegistryPath)
 {
 
-	DbgPrint("ProorityBoosterUnload[%s][%d] !!!\n", __FUNCTION__, __LINE__);
-	DriverObject->DriverUnload = ProorityBoosterUnload;
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+	PrioitityBoosterDriverInit(DriverObject, RegistryPath);
+	//DriverObject->DriverInit = PrioitityBoosterDriverInit;
+	DriverObject->DriverUnload = PriorityBoosterUnload;
+
+
+
 
 
 	DriverObject->MajorFunction[IRP_MJ_CREATE] = PriorityBoosterCreateClose;
@@ -39,9 +44,37 @@ NTSTATUS DriverEntry(
 	//DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = PriorityBoosterDeviceControl;
 	return STATUS_SUCCESS;
 }
-VOID ProorityBoosterUnload(_In_  PDRIVER_OBJECT pDriverObject)
+
+
+NTSTATUS PrioitityBoosterDriverInit(_In_   PDRIVER_OBJECT  DriverObject, _In_ PUNICODE_STRING RegistryPath)
 {
-	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\?\\PriorityBooster");
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+	UNICODE_STRING devName = RTL_CONSTANT_STRING(L"\\Device\\PriorityBooster");
+	PDEVICE_OBJECT pDeviceObject;
+	NTSTATUS status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, FALSE, &pDeviceObject);
+	if (!NT_SUCCESS(status))
+	{
+		DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+		DbgPrint(("Failed to create device object (0X%08X)\n"), status);
+		return status;
+	}
+
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\PriorityBooster");
+	status = IoCreateSymbolicLink(&symLink, &devName);
+	if (!NT_SUCCESS(status))
+	{
+		DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+		DbgPrint("Failed to create symbolic link (0X%08X)\n", status);
+		IoDeleteDevice(pDeviceObject);
+	}
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+			return 0;
+}
+VOID PriorityBoosterUnload(_In_  PDRIVER_OBJECT pDriverObject)
+{
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\PriorityBooster");
 	// delete symbolic link
 	IoDeleteSymbolicLink(&symLink);
 
@@ -50,11 +83,11 @@ VOID ProorityBoosterUnload(_In_  PDRIVER_OBJECT pDriverObject)
 
 }
 
-
+_Use_decl_annotations_
 NTSTATUS PriorityBoosterCreateClose(_In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp)
 {
 	UNREFERENCED_PARAMETER(DeviceObject);
-
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 
 	Irp->IoStatus.Status = STATUS_SUCCESS;
 	Irp->IoStatus.Information = 0;
@@ -64,11 +97,11 @@ NTSTATUS PriorityBoosterCreateClose(_In_ struct _DEVICE_OBJECT* DeviceObject, _I
 	return STATUS_SUCCESS;
 }
 
-
+_Use_decl_annotations_
 NTSTATUS PriorityBoosterDeviceControl(_In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp)
 {
 	// get our IO_STACK_LOCATION
-
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 	PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);
 
 	ULONG status =  STATUS_SUCCESS;
@@ -80,16 +113,18 @@ NTSTATUS PriorityBoosterDeviceControl(_In_ struct _DEVICE_OBJECT* DeviceObject, 
 	{
 		// do the work
 
-
+		DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 		int len = stack->Parameters.DeviceIoControl.InputBufferLength;
 		if (len < sizeof(struct ThreadData))
 		{
+			DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 			status = STATUS_BUFFER_TOO_SMALL;
 			break;
 		}
 		struct ThreadData* data = (stack->Parameters.DeviceIoControl.Type3InputBuffer);
 		if (!data)
 		{
+			DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 			status = STATUS_INVALID_PARAMETER;
 			break;
 		}
@@ -98,15 +133,16 @@ NTSTATUS PriorityBoosterDeviceControl(_In_ struct _DEVICE_OBJECT* DeviceObject, 
 			status = STATUS_INVALID_PARAMETER;
 			break;
 		}
-
+		DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 		PETHREAD Thread;
-		status = PsLookupThreadByThreadId(ULongToHandle(data->Priority), &Thread);
+		status = PsLookupThreadByThreadId(ULongToHandle(data->ThreadId), &Thread);
 		if (!NT_SUCCESS(status))
 		{
+			DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 			// warr -->
 			break;
 		}
-
+		DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 		KeSetPriorityThread((PKTHREAD)Thread, data->Priority);
 		ObDereferenceObject(Thread);
 		DbgPrint("Thread  priority change for %d ot %d succeeded !\n", data->ThreadId, data->Priority);
@@ -119,7 +155,7 @@ NTSTATUS PriorityBoosterDeviceControl(_In_ struct _DEVICE_OBJECT* DeviceObject, 
 		status = STATUS_INVALID_DEVICE_REQUEST;
 		break;
 	}
-
+	DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
 	Irp->IoStatus.Status = status;
 	Irp->IoStatus.Information = 0;
 	IoCompleteRequest(Irp, IO_NO_INCREMENT);
