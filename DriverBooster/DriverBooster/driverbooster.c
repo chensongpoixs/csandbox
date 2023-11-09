@@ -1,18 +1,9 @@
 #include <ntifs.h>
+#include "PriorityBoosterCommon.h"
 #include <ntddk.h>
 
 
 
-
-// 线程结构体
-
-struct ThreadData
-{
-	ULONG ThreadId;  //线程id 32 无符号
-	int Priority;
-
-};
-#define PRIORITY_BOOSTER_DEVICE  0X8000
 
 //#define CTL_CODE(DeviceType, Function, Method, Access) ( \
 //	((DeviceType) << 16) | ((Access) << 14) | ((Function) << 2) | (Method))
@@ -20,8 +11,8 @@ struct ThreadData
 
 
 
-#define IOCTL_PRIORITY_BOOSTER_SET_PRIORITY  CTL_CODE(PRIORITY_BOOSTER_DEVICE, \
-	0X800, METHOD_NEITHER, FILE_ANY_ACCESS)
+//#define IOCTL_PRIORITY_BOOSTER_SET_PRIORITY  CTL_CODE(PRIORITY_BOOSTER_DEVICE, \
+//	0X800, METHOD_NEITHER, FILE_ANY_ACCESS)
 
 
 
