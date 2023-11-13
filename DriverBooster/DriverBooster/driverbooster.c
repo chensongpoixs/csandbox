@@ -128,24 +128,33 @@ NTSTATUS PriorityBoosterDeviceControl(_In_ struct _DEVICE_OBJECT* DeviceObject, 
 			status = STATUS_INVALID_PARAMETER;
 			break;
 		}
-		if (data->Priority < 1 || data->Priority > 31)
+		// __try {} __except {}
+		__try
 		{
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-		DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
-		PETHREAD Thread;
-		status = PsLookupThreadByThreadId(ULongToHandle(data->ThreadId), &Thread);
-		if (!NT_SUCCESS(status))
-		{
+			if (data->Priority < 1 || data->Priority > 31)
+			{
+				status = STATUS_INVALID_PARAMETER;
+				break;
+			}
 			DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
-			// warr -->
-			break;
+			PETHREAD Thread;
+			status = PsLookupThreadByThreadId(ULongToHandle(data->ThreadId), &Thread);
+			if (!NT_SUCCESS(status))
+			{
+				DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+				// warr -->
+				break;
+			}
+			DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
+			KeSetPriorityThread((PKTHREAD)Thread, data->Priority);
+			ObDereferenceObject(Thread);
+			DbgPrint("Thread  priority change for %d ot %d succeeded !\n", data->ThreadId, data->Priority);
 		}
-		DbgPrint("[%s][%d] !!!\n", __FUNCTION__, __LINE__);
-		KeSetPriorityThread((PKTHREAD)Thread, data->Priority);
-		ObDereferenceObject(Thread);
-		DbgPrint("Thread  priority change for %d ot %d succeeded !\n", data->ThreadId, data->Priority);
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			// something wrong with the buffer
+			status = STATUS_ACCESS_VIOLATION;
+		}
 		break;
 
 

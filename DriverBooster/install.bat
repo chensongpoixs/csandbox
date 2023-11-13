@@ -1,4 +1,4 @@
-@echo on 
+@echo off 
 
 REM 安装驱动
 sc create booster type= kernel binPath=C:\Work\threadPriority\Debug\DriverBooster.sys
